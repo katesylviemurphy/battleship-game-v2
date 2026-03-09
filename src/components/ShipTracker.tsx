@@ -8,14 +8,14 @@ type ShipTrackerProps = {
 
 function ShipIcon({ size, isSunk }: { size: number; isSunk: boolean }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-1">
       {Array.from({ length: size }, (_, i) => (
         <div
           key={i}
-          className={`w-4 h-2.5 rounded-[2px] transition-all duration-500 ${
+          className={`w-4 h-3 rounded transition-all duration-500 ${
             isSunk
-              ? 'bg-sunk-500/60 border border-red-400/30'
-              : 'bg-ocean-400/40 border border-ocean-400/30'
+              ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+              : 'bg-cyan-400'
           }`}
         />
       ))}
@@ -25,13 +25,23 @@ function ShipIcon({ size, isSunk }: { size: number; isSunk: boolean }) {
 
 export function ShipTracker({ ships, title }: ShipTrackerProps) {
   const sunkCount = ships.filter(s => s.isSunk).length;
+  const allSunk = sunkCount === SHIP_DEFINITIONS.length;
 
   return (
     <div className="animate-fade-in">
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
-        {title}
-      </h3>
-      <div className="space-y-1.5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-cyan-400">
+          {title}
+        </h3>
+        <div className={`text-sm font-mono font-bold px-3 py-1 rounded-full ${
+          allSunk 
+            ? 'bg-red-500/30 text-red-400 border border-red-500/50' 
+            : 'bg-cyan-500/20 text-white border border-cyan-500/30'
+        }`}>
+          {sunkCount}/{SHIP_DEFINITIONS.length}
+        </div>
+      </div>
+      <div className="space-y-2">
         {SHIP_DEFINITIONS.map(def => {
           const ship = ships.find(s => s.type === def.type);
           const isSunk = ship?.isSunk ?? false;
@@ -39,14 +49,19 @@ export function ShipTracker({ ships, title }: ShipTrackerProps) {
           return (
             <div
               key={def.type}
-              className={`flex items-center justify-between py-1 px-2 rounded transition-all duration-300 ${
-                isSunk ? 'bg-red-900/20' : 'bg-navy-800/50'
+              className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-all duration-300 ${
+                isSunk 
+                  ? 'bg-red-950/50 border-2 border-red-500/40' 
+                  : 'bg-slate-800/50 border border-slate-700/50'
               }`}
             >
               <div className="flex items-center gap-2">
+                {isSunk && (
+                  <span className="text-red-400 text-sm font-bold">✕</span>
+                )}
                 <span
-                  className={`text-xs font-medium transition-all duration-300 ${
-                    isSunk ? 'text-red-400 line-through' : 'text-slate-300'
+                  className={`text-sm font-bold transition-all duration-300 ${
+                    isSunk ? 'text-red-400 line-through' : 'text-white'
                   }`}
                 >
                   {def.label}
@@ -56,9 +71,6 @@ export function ShipTracker({ ships, title }: ShipTrackerProps) {
             </div>
           );
         })}
-      </div>
-      <div className="mt-2 text-xs text-slate-500">
-        {sunkCount} / {SHIP_DEFINITIONS.length} sunk
       </div>
     </div>
   );

@@ -21,24 +21,31 @@ export const Board = memo(function Board({
 }: BoardProps) {
   return (
     <div className="animate-fade-in">
-      <div className="mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-400">
-          {title}
-        </h2>
+      <div className="mb-4">
+        <div className="flex items-center gap-3 mb-1">
+          <div className={`w-3 h-3 rounded-full ${isPlayerBoard ? 'bg-emerald-400' : 'bg-red-400'} shadow-[0_0_12px_currentColor]`} />
+          <h2 className="text-base font-black uppercase tracking-widest text-white">
+            {title}
+          </h2>
+        </div>
         {subtitle && (
-          <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+          <p className="text-sm text-slate-400 ml-6">{subtitle}</p>
         )}
       </div>
 
-      <div className="relative bg-navy-900 rounded-lg p-3 border border-white/5 shadow-xl">
-        {/* Scanline overlay */}
-        <div className="absolute inset-0 scanline-overlay rounded-lg" />
+      <div className="relative rounded-2xl p-5 bg-slate-900/80 border-2 border-cyan-500/20 shadow-[0_0_60px_rgba(6,182,212,0.1)]">
+        {/* Radial glow background */}
+        <div className="absolute inset-0 rounded-2xl opacity-30"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(6,182,212,0.1) 0%, transparent 70%)'
+          }}
+        />
 
         {/* Column labels */}
-        <div className="grid grid-cols-[1.5rem_repeat(10,1fr)] gap-0.5 mb-0.5">
+        <div className="relative grid grid-cols-[2rem_repeat(10,1fr)] gap-1 mb-1">
           <div />
           {COLUMN_LABELS.map(label => (
-            <div key={label} className="grid-label text-center py-0.5">
+            <div key={label} className="text-center py-1 text-xs font-mono font-bold text-cyan-400">
               {label}
             </div>
           ))}
@@ -48,9 +55,9 @@ export const Board = memo(function Board({
         {board.map((row, rowIdx) => (
           <div
             key={rowIdx}
-            className="grid grid-cols-[1.5rem_repeat(10,1fr)] gap-0.5 mb-0.5"
+            className="relative grid grid-cols-[2rem_repeat(10,1fr)] gap-1 mb-1"
           >
-            <div className="grid-label flex items-center justify-center">
+            <div className="flex items-center justify-center text-xs font-mono font-bold text-cyan-400">
               {ROW_LABELS[rowIdx]}
             </div>
             {row.map((cell, colIdx) => (
