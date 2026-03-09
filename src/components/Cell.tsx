@@ -4,9 +4,7 @@ import type { CellState } from '../types/game';
 type CellProps = {
   state: CellState;
   isLastMove?: boolean;
-  isSonarRevealed?: boolean;
   isPlayerBoard: boolean;
-  isSonarMode?: boolean;
   onClick?: () => void;
   row: number;
   col: number;
@@ -16,20 +14,13 @@ function getCellClasses(
   state: CellState,
   isPlayerBoard: boolean,
   isLastMove?: boolean,
-  isSonarRevealed?: boolean,
-  isSonarMode?: boolean
 ): string {
   const base =
     'w-full aspect-square rounded-sm transition-all duration-200 relative border border-white/5 flex items-center justify-center';
 
   // Enemy board cells that haven't been revealed
-  if (!isPlayerBoard && state === 'empty' && !isSonarRevealed) {
-    return `${base} bg-navy-800 hover:bg-navy-600 ${isSonarMode ? 'hover:ring-2 hover:ring-sonar-400/50 cursor-crosshair' : 'cursor-pointer hover:border-ocean-400/40'}`;
-  }
-
-  // Enemy board - sonar revealed (no ship found there yet)
-  if (!isPlayerBoard && state === 'empty' && isSonarRevealed) {
-    return `${base} bg-navy-800/80 border-sonar-400/20 cursor-pointer hover:border-ocean-400/40`;
+  if (!isPlayerBoard && state === 'empty') {
+    return `${base} bg-navy-800 hover:bg-navy-600 cursor-pointer hover:border-ocean-400/40`;
   }
 
   // Player board - show ships
@@ -57,7 +48,6 @@ function getCellClasses(
 }
 
 function CellContent({ state, isPlayerBoard }: { state: CellState; isPlayerBoard: boolean }) {
-  // Ship indicator for player's own board
   if (isPlayerBoard && state === 'ship') {
     return <div className="w-2/3 h-2/3 rounded-sm bg-ocean-400/40" />;
   }
@@ -94,12 +84,10 @@ function CellContent({ state, isPlayerBoard }: { state: CellState; isPlayerBoard
 export const Cell = memo(function Cell({
   state,
   isLastMove,
-  isSonarRevealed,
   isPlayerBoard,
-  isSonarMode,
   onClick,
 }: CellProps) {
-  const classes = getCellClasses(state, isPlayerBoard, isLastMove, isSonarRevealed, isSonarMode);
+  const classes = getCellClasses(state, isPlayerBoard, isLastMove);
 
   return (
     <button

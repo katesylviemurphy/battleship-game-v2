@@ -1,9 +1,10 @@
 type HeaderProps = {
   onRestart: () => void;
+  onBackToMenu: () => void;
   gamePhase: string;
 };
 
-export function Header({ onRestart, gamePhase }: HeaderProps) {
+export function Header({ onRestart, onBackToMenu, gamePhase }: HeaderProps) {
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-navy-900/50 backdrop-blur-sm">
       <div className="flex items-center gap-3">
@@ -29,12 +30,20 @@ export function Header({ onRestart, gamePhase }: HeaderProps) {
         </span>
       </div>
 
-      <button
-        onClick={onRestart}
-        className="px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 text-slate-300 hover:bg-navy-700 hover:border-white/20 transition-all duration-200"
-      >
-        {gamePhase === 'gameOver' ? 'New Game' : 'Restart'}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onBackToMenu}
+          className="px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 text-slate-400 hover:bg-navy-700 hover:border-white/20 hover:text-slate-300 transition-all duration-200"
+        >
+          Menu
+        </button>
+        <button
+          onClick={onRestart}
+          className="px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 text-slate-300 hover:bg-navy-700 hover:border-white/20 transition-all duration-200"
+        >
+          {gamePhase === 'gameOver' ? 'New Game' : 'Restart'}
+        </button>
+      </div>
     </header>
   );
 }

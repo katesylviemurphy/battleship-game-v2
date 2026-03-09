@@ -1,51 +1,65 @@
 import { useCallback, useReducer } from 'react';
-import type { GameState, Coordinate, Difficulty, SonarResult } from '../types/game';
-import { TOTAL_SONAR_SCANS, SHIP_DEFINITIONS } from '../types/game';
+import type { GameState, Coordinate, Difficulty, Orientation } from '../types/game';
+import { SHIP_DEFINITIONS } from '../types/game';
 import {
   createEmptyBoard,
   placeAllShips,
+  placeShip,
   processAttack,
   allShipsSunk,
   isAlreadyAttacked,
-  getSonarArea,
-  performSonarScan,
 } from '../logic/board';
 import { getAITarget, updateMediumAI, resetAIState } from '../logic/ai';
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 
 type GameAction =
+  | { type: 'SELECT_DIFFICULTY'; difficulty: Difficulty }
+  | { type: 'PLACE_SHIP'; target: Coordinate }
+  | { type: 'TOGGLE_ORIENTATION' }
+  | { type: 'START_GAME' }
   | { type: 'PLAYER_ATTACK'; target: Coordinate }
   | { type: 'AI_ATTACK' }
-  | { type: 'SET_DIFFICULTY'; difficulty: Difficulty }
-  | { type: 'TOGGLE_SONAR_MODE' }
-  | { type: 'SONAR_SCAN'; target: Coordinate }
-  | { type: 'RESTART' };
+  | { type: 'RESTART' }
+  | { type: 'GO_TO_LANDING' };
 
 // ── Initial State ───────────────────────────────────────────────────────────
 
-function createInitialState(difficulty: Difficulty): GameState {
-  const playerBoard = createEmptyBoard();
-  const enemyBoard = createEmptyBoard();
-  const playerShips = placeAllShips(playerBoard);
-  const enemyShips = placeAllShips(enemyBoard);
-
+function createLandingState(): GameState {
   return {
-    playerBoard,
-    enemyBoard,
-    playerShips,
-    enemyShips,
-    phase: 'playing',
+    playerBoard: createEmptyBoard(),
+    enemyBoard: createEmptyBoard(),
+    playerShips: [],
+    enemyShips: [],
+    phase: 'landing',
     result: null,
     isPlayerTurn: true,
-    difficulty,
-    sonarScansRemaining: TOTAL_SONAR_SCANS,
-    sonarResults: [],
-    isSonarMode: false,
+    difficulty: 'medium',
     moveCount: 0,
     lastPlayerMove: null,
     lastEnemyMove: null,
-    message: 'Your turn — select a target on the enemy grid',
+    message: '',
+    currentShipIndex: 0,
+    placementOrientation: 'horizontal',
+  };
+}
+
+function createPlacingState(difficulty: Difficulty): GameState {
+  return {
+    playerBoard: createEmptyBoard(),
+    enemyBoard: createEmptyBoard(),
+    playerShips: [],
+    enemyShips: [],
+    phase: 'placing',
+    result: null,
+    isPlayerTurn: true,
+    difficulty,
+    moveCount: 0,
+    lastPlayerMove: null,
+    lastEnemyMove: null,
+    message: `Place your ${SHIP_DEFINITIONS[0].label} (${SHIP_DEFINITIONS[0].size} cells)`,
+    currentShipIndex: 0,
+    placementOrientation: 'horizontal',
   };
 }
 
@@ -53,6 +67,77 @@ function createInitialState(difficulty: Difficulty): GameState {
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
+    case 'SELECT_DIFFICULTY': {
+      return createPlacingState(action.difficulty);
+    }
+
+    case 'TOGGLE_ORIENTATION': {
+      if (state.phase !== 'placing') return state;
+      if (state.currentShipIndex >= SHIP_DEFINITIONS.length) return state;
+      const newOrientation: Orientation =
+        state.placementOrientation === 'horizontal' ? 'vertical' : 'horizontal';
+      return {
+        ...state,
+        placementOrientation: newOrientation,
+        message: `Place your ${SHIP_DEFINITIONS[state.currentShipIndex].label} (${SHIP_DEFINITIONS[state.currentShipIndex].size} cells) — ${newOrientation}`,
+      };
+    }
+
+    case 'PLACE_SHIP': {
+      if (state.phase !== 'placing') return state;
+      if (state.currentShipIndex >= SHIP_DEFINITIONS.length) return state;
+
+      const def = SHIP_DEFINITIONS[state.currentShipIndex];
+      const { target } = action;
+
+      const newBoard = state.playerBoard.map(row => row.map(cell => ({ ...cell })));
+      const ship = placeShip(
+        newBoard,
+        def.type,
+        def.size,
+        target.row,
+        target.col,
+        state.placementOrientation
+      );
+
+      if (!ship) {
+        return {
+          ...state,
+          message: `Invalid placement! Try a different position for ${def.label}`,
+        };
+      }
+
+      const newShips = [...state.playerShips, ship];
+      const nextIndex = state.currentShipIndex + 1;
+      const allPlaced = nextIndex >= SHIP_DEFINITIONS.length;
+
+      return {
+        ...state,
+        playerBoard: newBoard,
+        playerShips: newShips,
+        currentShipIndex: nextIndex,
+        message: allPlaced
+          ? 'All ships placed! Click "Start Battle" to begin.'
+          : `Place your ${SHIP_DEFINITIONS[nextIndex].label} (${SHIP_DEFINITIONS[nextIndex].size} cells) — ${state.placementOrientation}`,
+      };
+    }
+
+    case 'START_GAME': {
+      if (state.currentShipIndex < SHIP_DEFINITIONS.length) return state;
+
+      const enemyBoard = createEmptyBoard();
+      const enemyShips = placeAllShips(enemyBoard);
+      resetAIState();
+
+      return {
+        ...state,
+        enemyBoard,
+        enemyShips,
+        phase: 'playing',
+        message: 'Your turn — select a target on the enemy grid',
+      };
+    }
+
     case 'PLAYER_ATTACK': {
       if (!state.isPlayerTurn || state.phase !== 'playing') return state;
       const { target } = action;
@@ -79,7 +164,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         result: gameOver ? 'win' : null,
         moveCount: state.moveCount + 1,
         lastPlayerMove: target,
-        isSonarMode: false,
         message,
       };
     }
@@ -116,57 +200,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'SET_DIFFICULTY': {
-      resetAIState();
-      return createInitialState(action.difficulty);
-    }
-
-    case 'TOGGLE_SONAR_MODE': {
-      if (state.phase !== 'playing' || !state.isPlayerTurn) return state;
-      if (state.sonarScansRemaining <= 0) return state;
-      return { ...state, isSonarMode: !state.isSonarMode };
-    }
-
-    case 'SONAR_SCAN': {
-      if (!state.isSonarMode || state.sonarScansRemaining <= 0) return state;
-      if (state.phase !== 'playing' || !state.isPlayerTurn) return state;
-
-      const { target } = action;
-      const hasShip = performSonarScan(state.enemyBoard, target);
-      const cells = getSonarArea(target);
-
-      const sonarResult: SonarResult = {
-        center: target,
-        hasShip,
-        cells,
-        timestamp: Date.now(),
-      };
-
-      const newBoard = state.enemyBoard.map(row => row.map(cell => ({ ...cell })));
-      for (const cell of cells) {
-        if (newBoard[cell.row][cell.col].state === 'empty') {
-          newBoard[cell.row][cell.col] = {
-            ...newBoard[cell.row][cell.col],
-            isSonarRevealed: true,
-          };
-        }
-      }
-
-      return {
-        ...state,
-        enemyBoard: newBoard,
-        sonarScansRemaining: state.sonarScansRemaining - 1,
-        sonarResults: [...state.sonarResults, sonarResult],
-        isSonarMode: false,
-        message: hasShip
-          ? 'Sonar contact! Ship detected in scan area.'
-          : 'Sonar clear — no ships detected.',
-      };
-    }
-
     case 'RESTART': {
       resetAIState();
-      return createInitialState(state.difficulty);
+      return createPlacingState(state.difficulty);
+    }
+
+    case 'GO_TO_LANDING': {
+      resetAIState();
+      return createLandingState();
     }
 
     default:
@@ -176,8 +217,24 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
 // ── Hook ────────────────────────────────────────────────────────────────────
 
-export function useGame(initialDifficulty: Difficulty = 'medium') {
-  const [state, dispatch] = useReducer(gameReducer, initialDifficulty, createInitialState);
+export function useGame() {
+  const [state, dispatch] = useReducer(gameReducer, undefined, createLandingState);
+
+  const selectDifficulty = useCallback((difficulty: Difficulty) => {
+    dispatch({ type: 'SELECT_DIFFICULTY', difficulty });
+  }, []);
+
+  const placePlayerShip = useCallback((target: Coordinate) => {
+    dispatch({ type: 'PLACE_SHIP', target });
+  }, []);
+
+  const toggleOrientation = useCallback(() => {
+    dispatch({ type: 'TOGGLE_ORIENTATION' });
+  }, []);
+
+  const startGame = useCallback(() => {
+    dispatch({ type: 'START_GAME' });
+  }, []);
 
   const playerAttack = useCallback((target: Coordinate) => {
     dispatch({ type: 'PLAYER_ATTACK', target });
@@ -187,21 +244,23 @@ export function useGame(initialDifficulty: Difficulty = 'medium') {
     dispatch({ type: 'AI_ATTACK' });
   }, []);
 
-  const setDifficulty = useCallback((difficulty: Difficulty) => {
-    dispatch({ type: 'SET_DIFFICULTY', difficulty });
-  }, []);
-
-  const toggleSonarMode = useCallback(() => {
-    dispatch({ type: 'TOGGLE_SONAR_MODE' });
-  }, []);
-
-  const sonarScan = useCallback((target: Coordinate) => {
-    dispatch({ type: 'SONAR_SCAN', target });
-  }, []);
-
   const restart = useCallback(() => {
     dispatch({ type: 'RESTART' });
   }, []);
 
-  return { state, playerAttack, aiAttack, setDifficulty, toggleSonarMode, sonarScan, restart };
+  const goToLanding = useCallback(() => {
+    dispatch({ type: 'GO_TO_LANDING' });
+  }, []);
+
+  return {
+    state,
+    selectDifficulty,
+    placePlayerShip,
+    toggleOrientation,
+    startGame,
+    playerAttack,
+    aiAttack,
+    restart,
+    goToLanding,
+  };
 }

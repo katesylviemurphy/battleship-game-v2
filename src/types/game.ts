@@ -1,7 +1,6 @@
 // ── Core Types ──────────────────────────────────────────────────────────────
 
 export const BOARD_SIZE = 10;
-export const TOTAL_SONAR_SCANS = 2;
 
 export type Coordinate = {
   row: number;
@@ -26,23 +25,15 @@ export type Cell = {
   state: CellState;
   shipType?: ShipType;
   isLastMove?: boolean;
-  isSonarRevealed?: boolean;
 };
 
 export type Board = Cell[][];
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
-export type GamePhase = 'setup' | 'playing' | 'gameOver';
+export type GamePhase = 'landing' | 'placing' | 'playing' | 'gameOver';
 
 export type GameResult = 'win' | 'loss' | null;
-
-export type SonarResult = {
-  center: Coordinate;
-  hasShip: boolean;
-  cells: Coordinate[];
-  timestamp: number;
-};
 
 export type GameState = {
   playerBoard: Board;
@@ -53,13 +44,13 @@ export type GameState = {
   result: GameResult;
   isPlayerTurn: boolean;
   difficulty: Difficulty;
-  sonarScansRemaining: number;
-  sonarResults: SonarResult[];
-  isSonarMode: boolean;
   moveCount: number;
   lastPlayerMove: Coordinate | null;
   lastEnemyMove: Coordinate | null;
   message: string;
+  // Ship placement state
+  currentShipIndex: number;
+  placementOrientation: Orientation;
 };
 
 // Ship definitions with sizes (standard Battleship rules)

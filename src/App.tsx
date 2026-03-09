@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useGame } from './hooks/useGame';
+import { LandingPage } from './components/LandingPage';
+import { ShipPlacement } from './components/ShipPlacement';
 import { Header } from './components/Header';
 import { Board } from './components/Board';
 import { GameStatus } from './components/GameStatus';
 import { ShipTracker } from './components/ShipTracker';
-import { DifficultySelector } from './components/DifficultySelector';
-import { SonarButton } from './components/SonarButton';
 import type { Coordinate } from './types/game';
 
 const AI_DELAY_MS = 600;
@@ -13,13 +13,15 @@ const AI_DELAY_MS = 600;
 export default function App() {
   const {
     state,
+    selectDifficulty,
+    placePlayerShip,
+    toggleOrientation,
+    startGame,
     playerAttack,
     aiAttack,
-    setDifficulty,
-    toggleSonarMode,
-    sonarScan,
     restart,
-  } = useGame('medium');
+    goToLanding,
+  } = useGame();
 
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -35,19 +37,46 @@ export default function App() {
     };
   }, [state.isPlayerTurn, state.phase, aiAttack]);
 
+  // Handle keyboard shortcut for rotation during placement
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (state.phase === 'placing' && (e.key === 'r' || e.key === 'R')) {
+        toggleOrientation();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [state.phase, toggleOrientation]);
+
+  // Landing page
+  if (state.phase === 'landing') {
+    return <LandingPage onSelectDifficulty={selectDifficulty} />;
+  }
+
+  // Ship placement phase
+  if (state.phase === 'placing') {
+    return (
+      <ShipPlacement
+        board={state.playerBoard}
+        currentShipIndex={state.currentShipIndex}
+        orientation={state.placementOrientation}
+        onPlaceShip={placePlayerShip}
+        onToggleOrientation={toggleOrientation}
+        onStartGame={startGame}
+        message={state.message}
+      />
+    );
+  }
+
+  // Playing / Game Over phases
   function handleEnemyCellClick(coord: Coordinate) {
     if (state.phase !== 'playing' || !state.isPlayerTurn) return;
-
-    if (state.isSonarMode) {
-      sonarScan(coord);
-    } else {
-      playerAttack(coord);
-    }
+    playerAttack(coord);
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-navy-950">
-      <Header onRestart={restart} gamePhase={state.phase} />
+      <Header onRestart={restart} onBackToMenu={goToLanding} gamePhase={state.phase} />
 
       <main className="flex-1 px-4 py-6 max-w-7xl mx-auto w-full">
         {/* Game Status Bar */}
@@ -81,14 +110,9 @@ export default function App() {
               <Board
                 board={state.enemyBoard}
                 isPlayerBoard={false}
-                isSonarMode={state.isSonarMode}
                 onCellClick={handleEnemyCellClick}
                 title="Enemy Waters"
-                subtitle={
-                  state.isSonarMode
-                    ? 'Click to scan 3x3 area'
-                    : 'Click to fire'
-                }
+                subtitle="Click to fire"
                 lastMove={state.lastPlayerMove}
               />
             </div>
@@ -96,28 +120,14 @@ export default function App() {
 
           {/* Sidebar */}
           <div className="xl:w-64 flex flex-col gap-4">
-            {/* Difficulty Selector */}
+            {/* Difficulty display */}
             <div className="bg-navy-900/50 rounded-lg border border-white/5 p-3">
-              <DifficultySelector
-                difficulty={state.difficulty}
-                onChange={setDifficulty}
-                disabled={false}
-              />
-              <p className="text-[10px] text-slate-500 mt-2">
-                Changing difficulty starts a new game
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">
+                Difficulty
+              </h3>
+              <p className="text-sm font-medium text-ocean-300 capitalize">
+                {state.difficulty}
               </p>
-            </div>
-
-            {/* Sonar Scan */}
-            <div className="bg-navy-900/50 rounded-lg border border-white/5 p-3">
-              <SonarButton
-                scansRemaining={state.sonarScansRemaining}
-                isSonarMode={state.isSonarMode}
-                onToggle={toggleSonarMode}
-                disabled={
-                  state.phase !== 'playing' || !state.isPlayerTurn
-                }
-              />
             </div>
 
             {/* Enemy Fleet Status */}
@@ -135,29 +145,6 @@ export default function App() {
                 title="Your Fleet"
               />
             </div>
-
-            {/* Sonar Log */}
-            {state.sonarResults.length > 0 && (
-              <div className="bg-navy-900/50 rounded-lg border border-white/5 p-3">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                  Sonar Log
-                </h3>
-                <div className="space-y-1">
-                  {state.sonarResults.map((result, i) => (
-                    <div
-                      key={i}
-                      className={`text-xs px-2 py-1 rounded ${
-                        result.hasShip
-                          ? 'bg-sonar-500/10 text-sonar-400'
-                          : 'bg-navy-800/50 text-slate-500'
-                      }`}
-                    >
-                      Scan #{i + 1}: {result.hasShip ? 'Contact detected' : 'Area clear'}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>

@@ -5,7 +5,6 @@ import { Cell } from './Cell';
 type BoardProps = {
   board: BoardType;
   isPlayerBoard: boolean;
-  isSonarMode?: boolean;
   onCellClick?: (coord: Coordinate) => void;
   title: string;
   subtitle?: string;
@@ -15,7 +14,6 @@ type BoardProps = {
 export function Board({
   board,
   isPlayerBoard,
-  isSonarMode = false,
   onCellClick,
   title,
   subtitle,
@@ -59,9 +57,7 @@ export function Board({
                 key={`${rowIdx}-${colIdx}`}
                 state={cell.state}
                 isLastMove={cell.isLastMove}
-                isSonarRevealed={cell.isSonarRevealed}
                 isPlayerBoard={isPlayerBoard}
-                isSonarMode={isSonarMode}
                 row={rowIdx}
                 col={colIdx}
                 onClick={

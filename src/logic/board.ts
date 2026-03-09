@@ -9,7 +9,7 @@ export function createEmptyBoard(): Board {
 }
 
 /** Check if a ship placement is valid */
-function isValidPlacement(
+export function isValidPlacement(
   board: Board,
   startRow: number,
   startCol: number,
@@ -119,23 +119,53 @@ export function isAlreadyAttacked(board: Board, coord: Coordinate): boolean {
   return state === 'hit' || state === 'miss' || state === 'sunk';
 }
 
-/** Get all cells in a 3x3 area centered on a coordinate (clamped to board) */
-export function getSonarArea(center: Coordinate): Coordinate[] {
-  const cells: Coordinate[] = [];
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      const row = center.row + dr;
-      const col = center.col + dc;
-      if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
-        cells.push({ row, col });
-      }
+/** Place a single ship on the board at a specific position */
+export function placeShip(
+  board: Board,
+  shipType: ShipType,
+  size: number,
+  startRow: number,
+  startCol: number,
+  orientation: Orientation
+): Ship | null {
+  if (!isValidPlacement(board, startRow, startCol, size, orientation)) {
+    return null;
+  }
+
+  const positions: Coordinate[] = [];
+  const newBoard = board.map(row => row.map(cell => ({ ...cell })));
+
+  for (let i = 0; i < size; i++) {
+    const row = orientation === 'vertical' ? startRow + i : startRow;
+    const col = orientation === 'horizontal' ? startCol + i : startCol;
+    positions.push({ row, col });
+    newBoard[row][col] = { state: 'ship', shipType };
+  }
+
+  // Copy the new board state back to the original board (mutate in place)
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      board[r][c] = newBoard[r][c];
     }
   }
-  return cells;
+
+  return { type: shipType, size, positions, hits: new Set<string>(), isSunk: false };
 }
 
-/** Perform a sonar scan: returns true if any ship segment is in the 3x3 area */
-export function performSonarScan(board: Board, center: Coordinate): boolean {
-  const area = getSonarArea(center);
-  return area.some(({ row, col }) => board[row][col].state === 'ship');
+/** Get preview positions for a ship placement (for hover preview) */
+export function getPlacementPreview(
+  board: Board,
+  startRow: number,
+  startCol: number,
+  size: number,
+  orientation: Orientation
+): { positions: Coordinate[]; isValid: boolean } {
+  const positions: Coordinate[] = [];
+  for (let i = 0; i < size; i++) {
+    const row = orientation === 'vertical' ? startRow + i : startRow;
+    const col = orientation === 'horizontal' ? startCol + i : startCol;
+    positions.push({ row, col });
+  }
+  const isValid = isValidPlacement(board, startRow, startCol, size, orientation);
+  return { positions, isValid };
 }
