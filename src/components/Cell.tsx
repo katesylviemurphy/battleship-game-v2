@@ -18,8 +18,8 @@ function getCellClasses(
   const base =
     'w-full aspect-square rounded-md transition-all duration-200 relative flex items-center justify-center';
 
-  // Enemy board cells that haven't been revealed
-  if (!isPlayerBoard && state === 'empty') {
+  // Enemy board cells that haven't been revealed (both empty AND hidden ships look the same)
+  if (!isPlayerBoard && (state === 'empty' || state === 'ship')) {
     return `${base} bg-slate-800/80 border border-slate-700/50 hover:bg-slate-700 hover:border-cyan-500/50 cursor-pointer hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]`;
   }
 
@@ -28,7 +28,7 @@ function getCellClasses(
     return `${base} bg-gradient-to-br from-cyan-500 to-cyan-600 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)]`;
   }
 
-  // Empty water
+  // Empty water (player board only at this point)
   if (state === 'empty') {
     return `${base} bg-slate-800/60 border border-slate-700/30`;
   }
