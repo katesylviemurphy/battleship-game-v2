@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Board as BoardType, Coordinate } from '../types/game';
 import { COLUMN_LABELS, ROW_LABELS } from '../types/game';
 import { Cell } from './Cell';
@@ -11,7 +12,7 @@ type BoardProps = {
   lastMove?: Coordinate | null;
 };
 
-export function Board({
+export const Board = memo(function Board({
   board,
   isPlayerBoard,
   onCellClick,
@@ -58,13 +59,9 @@ export function Board({
                 state={cell.state}
                 isLastMove={cell.isLastMove}
                 isPlayerBoard={isPlayerBoard}
+                onCellClick={!isPlayerBoard ? onCellClick : undefined}
                 row={rowIdx}
                 col={colIdx}
-                onClick={
-                  !isPlayerBoard && onCellClick
-                    ? () => onCellClick({ row: rowIdx, col: colIdx })
-                    : undefined
-                }
               />
             ))}
           </div>
@@ -72,4 +69,4 @@ export function Board({
       </div>
     </div>
   );
-}
+});

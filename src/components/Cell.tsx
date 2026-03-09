@@ -1,11 +1,11 @@
-import { memo } from 'react';
-import type { CellState } from '../types/game';
+import { memo, useCallback } from 'react';
+import type { CellState, Coordinate } from '../types/game';
 
 type CellProps = {
   state: CellState;
   isLastMove?: boolean;
   isPlayerBoard: boolean;
-  onClick?: () => void;
+  onCellClick?: (coord: Coordinate) => void;
   row: number;
   col: number;
 };
@@ -85,14 +85,21 @@ export const Cell = memo(function Cell({
   state,
   isLastMove,
   isPlayerBoard,
-  onClick,
+  onCellClick,
+  row,
+  col,
 }: CellProps) {
+  // Stable handler — onCellClick, row, and col are all stable across renders
+  const handleClick = useCallback(() => {
+    onCellClick?.({ row, col });
+  }, [onCellClick, row, col]);
+
   const classes = getCellClasses(state, isPlayerBoard, isLastMove);
 
   return (
     <button
       className={classes}
-      onClick={onClick}
+      onClick={onCellClick ? handleClick : undefined}
       disabled={isPlayerBoard || state === 'hit' || state === 'miss' || state === 'sunk'}
       aria-label={`Cell ${state}`}
     >

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useGame } from './hooks/useGame';
 import { LandingPage } from './components/LandingPage';
 import { ShipPlacement } from './components/ShipPlacement';
@@ -48,6 +48,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [state.phase, toggleOrientation]);
 
+  // Stable callback — guards are in the reducer so this reference never changes.
+  // Declared before early returns so hooks are called unconditionally.
+  const handleEnemyCellClick = useCallback(
+    (coord: Coordinate) => playerAttack(coord),
+    [playerAttack]
+  );
+
   // Landing page
   if (state.phase === 'landing') {
     return <LandingPage onSelectDifficulty={selectDifficulty} />;
@@ -66,12 +73,6 @@ export default function App() {
         message={state.message}
       />
     );
-  }
-
-  // Playing / Game Over phases
-  function handleEnemyCellClick(coord: Coordinate) {
-    if (state.phase !== 'playing' || !state.isPlayerTurn) return;
-    playerAttack(coord);
   }
 
   return (
